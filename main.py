@@ -4,6 +4,8 @@ from google import genai
 import sys
 from google.genai import types
 
+from prompts import system_prompt
+from call_function import available_functions, call_function
 def main():
     # loads environment variables from .env
     load_dotenv()
@@ -26,20 +28,32 @@ def main():
         )
     ]
     
-    iteration = 1
-    for message in messages:
-        print(f"This is message {iteration}: {message}")
-        iteration += 1
+    #iteration = 1
+    #for message in messages:
+    #    print(f"This is message {iteration}: {message}")
+    #   iteration += 1
 
     client = genai.Client(api_key=api_key)
 
     response = client.models.generate_content(
         model='gemini-2.0-flash-001',
         contents=messages,
+        config=types.GenerateContentConfig(
+            tools=[available_functions],
+            system_instruction=system_prompt
+        ),
     )
 
-    print(response.text)
+
+    if response.function_calls:
+        for function_call_part in response.function_calls:
+            function_call_result = call_function(function_call_part, verbose)
+            print(f"-> {function_call_result.parts[0].function_response.response}")
     
+    else:
+        print(response.text)
+
+
     if verbose:
         print(f"\nUser prompt: {prompt}")
         
